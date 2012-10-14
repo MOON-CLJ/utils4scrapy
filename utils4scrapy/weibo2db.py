@@ -18,3 +18,14 @@ class Weibo2Db(object):
             self.pipeline.process_item(weibo, None)
             if retweeted_user is not None:
                 self.pipeline.process_item(retweeted_user, None)
+
+    def status(self, status):
+        try:
+            user, weibo, retweeted_user = resp2item(status)
+        except DropItem:
+            return
+
+        self.pipeline.process_item(user, None)
+        self.pipeline.process_item(weibo, None)
+        if retweeted_user is not None:
+            self.pipeline.process_item(retweeted_user, None)
