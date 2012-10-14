@@ -26,7 +26,19 @@ class Weibo2Db(object):
             self.pipeline.db.master_timeline_weibo.update({'_id': int(id)},
                                                           {"$set": updates})
 
-    def statuses(self, id, statuses):
+    def statuses(self, statuses):
+        for status in statuses:
+            try:
+                user, weibo, retweeted_user = resp2item(status)
+            except DropItem:
+                continue
+
+            self.pipeline.process_item(user, None)
+            self.pipeline.process_item(weibo, None)
+            if retweeted_user is not None:
+                self.pipeline.process_item(retweeted_user, None)
+
+    def reposts(self, id, statuses):
         reposts = []
         for status in statuses:
             try:

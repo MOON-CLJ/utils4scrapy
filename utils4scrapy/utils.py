@@ -78,7 +78,7 @@ def load_last_page(app, weibo2db, client, id, since_id, reposts_count):
             reposts = client.get('statuses/repost_timeline', id=int(id),
                                  count=200, page=page, since_id=since_id)
             if len(reposts['reposts']) > 0:
-                weibo2db.statuses(id, reposts['reposts'])
+                weibo2db.reposts(id, reposts['reposts'])
                 return reposts['reposts'][0]['id']
         except Exception, e:
             app.logger.error(e)
