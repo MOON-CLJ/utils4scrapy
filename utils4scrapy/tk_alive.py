@@ -15,4 +15,5 @@ class TkAlive(object):
         return float(self.server.hget(self.key, token)) > time.time()
 
     def drop_tk(self, token):
-        self.server.hset(self.key, token, time.time())
+        if self.isalive(token):
+            self.server.hset(self.key, token, time.time())
