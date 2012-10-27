@@ -2,8 +2,9 @@ from scrapy.exceptions import CloseSpider
 from scrapy import log
 from tk_alive import TkAlive
 import simplejson as json
-import urllib2
+import urllib3
 import time
+import socket
 
 LIMIT_URL = 'https://api.weibo.com/2/account/rate_limit_status.json?access_token={access_token}'
 EXPIRED_TOKEN = 21327
@@ -24,21 +25,20 @@ class TkMaintain(object):
                 time.sleep(1)
                 log.msg("[Token Status] now check")
 
-                resp = urllib2.urlopen(LIMIT_URL.format(access_token=token))
-                resp = json.loads(resp.read())
+                http = urllib3.PoolManager()
+                resp = http.request('GET', LIMIT_URL.format(access_token=token))
+                resp = json.loads(resp.data)
 
                 if 'error' in resp:
                     if resp['error'] == 'expired_token':
                         return EXPIRED_TOKEN
                     if resp['error'] == 'invalid_access_token':
                         return INVALID_ACCESS_TOKEN
-                    else:
-                        continue
 
                 reset_time_in = resp['reset_time_in_seconds']
                 remaining = resp['remaining_user_hits']
                 return reset_time_in, remaining
-            except urllib2.URLError:
+            except socket.gaierror:
                 pass
 
     @staticmethod
@@ -78,5 +78,10 @@ class TkMaintain(object):
         log.msg("[Token Maintain] begin update_used")
         tokens_inqueue = req_count.all_tokens()
         for token in tokens_inqueue:
-            _, remaining = cls.token_status(token)
+            token_status = cls.token_status(token)
+            if token_status in [EXPIRED_TOKEN, INVALID_ACCESS_TOKEN]:
+                req_count.delete(token)
+                continue
+
+            _, remaining = token_status
             req_count.reset(token, 1000 - remaining)
