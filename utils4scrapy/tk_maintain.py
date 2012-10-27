@@ -56,6 +56,7 @@ class TkMaintain(object):
         if alive_count >= at_least:
             return
 
+        tokens_inqueue = req_count.all_tokens()
         users_insimpleapp = mongo.users.find()
         for user in users_insimpleapp:
             if user['expires_in'] > time.time():
