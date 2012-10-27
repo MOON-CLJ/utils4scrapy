@@ -66,7 +66,7 @@ class TkMaintain(object):
 
                 tk_alive.hset(token, expires_in)
                 if req_count.notexisted(token):
-                    req_count.reset(token, 0)
+                    req_count.reset(token, 0)  # this count will be set in update_used
                 alive_count += 1
         if alive_count >= at_least:
             return
