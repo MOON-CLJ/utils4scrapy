@@ -27,7 +27,7 @@ def resp2item(resp):
     user_keys = ['id', 'name', 'gender', 'province', 'city', 'location',
                  'description', 'verified', 'followers_count',
                  'statuses_count', 'friends_count', 'profile_image_url',
-                 'bi_followers_count', 'verified', 'verified_reason']
+                 'bi_followers_count', 'verified', 'verified_reason', 'verified_type']
     for k in user_keys:
         user[k] = resp['user'][k]
 
