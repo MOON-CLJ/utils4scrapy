@@ -1,6 +1,10 @@
 ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 
+def weiboinfo2url(uid, mid):
+    return "http://weibo.com/{uid}/{mid}".format(uid=uid, mid=mid_to_str(mid))
+
+
 def mid_to_str(mid):
     id1 = mid[0: 2]
     id2 = mid[2: 9]
@@ -46,3 +50,7 @@ def base62_decode(string, alphabet=ALPHABET):
         idx += 1
 
     return num
+
+
+if __name__ == '__main__':
+    print weiboinfo2url(2967150895, '3503717435292579')
