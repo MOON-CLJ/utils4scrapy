@@ -57,7 +57,7 @@ def maintain(r, mongo, api_key, req_count, tk_alive, at_least=1, hourly=False):
     print 'before alive:', len(tokens_in_redis)  # 清理之前
     alive_count = 0
     for token in tokens_in_redis:
-        if tk_alive.isalive(token):
+        if tk_alive.isalive(token, hourly=True):
             alive_count += 1
         else:
             req_count.delete(token)

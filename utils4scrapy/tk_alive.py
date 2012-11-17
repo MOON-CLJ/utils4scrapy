@@ -11,8 +11,11 @@ class TkAlive(object):
     def hset(self, token, expired_in):
         self.server.hset(self.key, token, expired_in)
 
-    def isalive(self, token):
-        return float(self.server.hget(self.key, token)) > time.time()
+    def isalive(self, token, hourly=False):
+        if hourly:
+            return float(self.server.hget(self.key, token)) > time.time() + 3600
+        else:
+            return float(self.server.hget(self.key, token)) > time.time()
 
     def drop_tk(self, token):
         if self.isalive(token):
