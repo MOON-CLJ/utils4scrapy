@@ -1,5 +1,3 @@
-from tk_alive import TkAlive
-
 REQ_COUNT_HASH = "{api_key}:tokens"
 
 
@@ -20,7 +18,7 @@ class ReqCount(object):
         _, score = pipe.execute()
         return member[0], score
 
-    def reset(self, token, count):
+    def set(self, token, count):
         self.server.zadd(self.key, token, count)
 
     def all_tokens(self):
@@ -28,7 +26,6 @@ class ReqCount(object):
 
     def delete(self, token):
         self.server.zrem(self.key, token)
-        self.tk_alive.drop_tk(token)
 
     def notexisted(self, token):
         return self.server.zrank(self.key, token) is None

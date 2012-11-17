@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from scrapy.exceptions import CloseSpider
 from scrapy import log
 from tk_alive import TkAlive
@@ -42,37 +43,30 @@ class TkMaintain(object):
                 pass
 
     @staticmethod
-    def maintain(r, mongo, api_key, req_count, at_least=6):
-        log.msg("[Token Maintain] begin maintain")
-        tk_alive = TkAlive(r, api_key)
-        tokens_inqueue = req_count.all_tokens()
+    def maintain(r, mongo, api_key, req_count, tk_alive, at_least=1, hourly=False):
+        log.msg('[Token Maintain] begin maintain')
+
+        # 从应用导入所有未过期的token，并初始使用次数为0，相应的alive为True
+        for user in mongo.users.find():
+            if user['expires_in'] > time.time():
+                req_count.set(user['access_token'], 0)
+                tk_alive.hset(user['access_token'], user['expires_in'])
+
+        tokens_in_redis = req_count.all_tokens()
+        print 'before alive:', len(tokens_in_redis)  # 清理之前
         alive_count = 0
-        for token in tokens_inqueue:
-            # this check because long time no spider is active
+        for token in tokens_in_redis:
             if tk_alive.isalive(token):
                 alive_count += 1
             else:
                 req_count.delete(token)
-        if alive_count >= at_least:
-            return
+                tk_alive.drop_tk(token)
 
-        tokens_inqueue = req_count.all_tokens()
-        users_insimpleapp = mongo.users.find()
-        for user in users_insimpleapp:
-            if user['expires_in'] > time.time():
-                token = user['access_token']
-                expires_in = user['expires_in']
-                if token in tokens_inqueue:
-                    continue
+        tokens_in_redis = req_count.all_tokens()
+        print 'after alive:', len(tokens_in_redis)  # 清理之后
 
-                tk_alive.hset(token, expires_in)
-                if req_count.notexisted(token):
-                    req_count.reset(token, 0)  # this count will be set in update_used
-                alive_count += 1
-        if alive_count >= at_least:
-            return
-
-        raise CloseSpider('TOKENS COUNT NOT REACH AT_LEAST')
+        if alive_count < at_least:
+            raise CloseSpider('TOKENS COUNT NOT REACH AT_LEAST')
 
     @classmethod
     def update_used(cls, req_count):
@@ -86,3 +80,46 @@ class TkMaintain(object):
 
             _, remaining = token_status
             req_count.reset(token, 1000 - remaining)
+
+
+if __name__ == '__main__':
+    from logbook import FileHandler
+    from logbook import Logger
+    from argparse import ArgumentParser
+    from req_count import ReqCount
+    import sys
+    import redis
+    import pymongo
+
+    parser = ArgumentParser()
+    parser.add_argument('--log', nargs=1, help='log path')
+    args = parser.parse_args(sys.argv[1:])
+    log_handler = FileHandler(args.log)
+    logbk = Logger('Token Maintain')
+
+    with log_handler.applicationbound():
+        logbk.info('maintain prepare')
+        # redis config
+        api_key = '4131380600'
+        host = 'localhost'
+        port = 6379
+        logbk.info('Redis connect to {host}:{port}'.format(host=host, port=port), level=log.WARNING)
+        r = redis.Redis(host, port)
+
+        # mongod config
+        host = 'localhost'
+        port = 27017
+        connection = pymongo.Connection(host, port)
+        db = connection.admin
+        db.authenticate('root', 'root')
+        logbk.info('Mongod connect to {host}:{port}'.format(host=host, port=port), level=log.WARNING)
+        db = connection.simple
+
+        req_count = ReqCount(r, api_key)
+        tk_alive = TkAlive(r, api_key)
+
+        at_least = 10
+
+        logbk.info('maintain begin')
+        TkMaintain.maintain(r, db, api_key, req_count, tk_alive, at_least=at_least, hourly=True)
+        logbk.info('maintain end')
