@@ -83,9 +83,22 @@ def calibration(req_count, tk_alive):
             continue
 
         _, remaining = tk_status
-        req_count.reset(token, HOURS_LIMIT - remaining)
+        req_count.set(token, HOURS_LIMIT - remaining)
 
     log.msg('[Token Maintain] end calibration')
+
+
+def one_valid_token(req_count, tk_alive):
+    while 1:
+        token, used = req_count.one_token()
+        if not token:
+            raise CloseSpider('No Token Alive')
+        elif token and not tk_alive.isalive(token):
+            req_count.delete(token)
+            tk_alive.drop_tk(token)
+            continue
+
+        return token, used
 
 
 if __name__ == '__main__':
