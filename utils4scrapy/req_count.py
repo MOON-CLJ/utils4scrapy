@@ -5,7 +5,6 @@ class ReqCount(object):
     def __init__(self, server, api_key):
         self.server = server
         self.key = REQ_COUNT_HASH.format(api_key=api_key)
-        self.tk_alive = TkAlive(server, api_key)
 
     def one_token(self):
         member = self.server.zrange(self.key, 0, 0)

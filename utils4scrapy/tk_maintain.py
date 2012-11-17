@@ -94,7 +94,8 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--log', nargs=1, help='log path')
     args = parser.parse_args(sys.argv[1:])
-    log_handler = FileHandler(args.log)
+    print args.log
+    log_handler = FileHandler(args.log[0])
     logbk = Logger('Token Maintain')
 
     with log_handler.applicationbound():
