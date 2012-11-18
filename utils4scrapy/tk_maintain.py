@@ -44,7 +44,7 @@ def token_status(token):
             pass
 
 
-def maintain(r, mongo, api_key, req_count, tk_alive, at_least=1, hourly=False):
+def maintain(r, mongo, api_key, req_count, tk_alive, at_least=1, hourly=False, logbk=None):
     log.msg('[Token Maintain] begin maintain')
 
     # 从应用导入所有未过期的token，并初始使用次数为0，相应的alive为True
@@ -54,7 +54,9 @@ def maintain(r, mongo, api_key, req_count, tk_alive, at_least=1, hourly=False):
             tk_alive.hset(user['access_token'], user['expires_in'])
 
     tokens_in_redis = req_count.all_tokens()
-    print 'before alive:', len(tokens_in_redis)  # 清理之前
+    if logbk:
+        logbk.info('before alive: %s' % len(tokens_in_redis))  # 清理之前
+
     alive_count = 0
     for token in tokens_in_redis:
         if tk_alive.isalive(token, hourly=True):
@@ -64,7 +66,8 @@ def maintain(r, mongo, api_key, req_count, tk_alive, at_least=1, hourly=False):
             tk_alive.drop_tk(token)
 
     tokens_in_redis = req_count.all_tokens()
-    print 'after alive:', len(tokens_in_redis)  # 清理之后
+    if logbk:
+        logbk.info('after alive: %s' % len(tokens_in_redis))  # 清理之后
 
     if alive_count < at_least:
         raise CloseSpider('TOKENS COUNT NOT REACH AT_LEAST')
@@ -113,7 +116,6 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--log', nargs=1, help='log path')
     args = parser.parse_args(sys.argv[1:])
-    print args.log
     log_handler = FileHandler(args.log[0])
     logbk = Logger('Token Maintain')
 
@@ -141,5 +143,5 @@ if __name__ == '__main__':
         at_least = 6
 
         logbk.info('maintain begin')
-        maintain(r, db, api_key, req_count, tk_alive, at_least=at_least, hourly=True)
+        maintain(r, db, api_key, req_count, tk_alive, at_least=at_least, hourly=True, logbk=logbk)
         logbk.info('maintain end')
