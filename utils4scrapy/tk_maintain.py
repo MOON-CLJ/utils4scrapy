@@ -11,7 +11,7 @@ LIMIT_URL = 'https://api.weibo.com/2/account/rate_limit_status.json?access_token
 EXPIRED_TOKEN = 21327
 INVALID_ACCESS_TOKEN = 21332
 HOURS_LIMIT = 1000
-
+API_KEY = '4131380600'
 
 def token_status(token):
     retry = 0
@@ -44,8 +44,17 @@ def token_status(token):
             pass
 
 
-def maintain(r, mongo, api_key, req_count, tk_alive, at_least=1, hourly=False, logbk=None):
+def maintain(mongo=None, req_count=None, tk_alive=None, at_least=1, hourly=False, logbk=None):
     log.msg('[Token Maintain] begin maintain')
+
+    if mongo is None:
+        mongo = _default_mongo()
+
+    if req_count is None:
+        req_count = _default_req_count()
+
+    if tk_alive is None:
+        tk_alive = _default_tk_alive()
 
     # 从应用导入所有未过期的token，并初始使用次数为0，相应的alive为True
     for user in mongo.users.find():
@@ -104,6 +113,41 @@ def one_valid_token(req_count, tk_alive):
         return token, used
 
 
+def _default_mongo(host=None, port=None):
+    # mongod config
+    if host is None:
+        host = 'localhost'
+    if port is None:
+        port = 27017
+    connection = pymongo.Connection(host, port)
+    db = connection.admin
+    db.authenticate('root', 'root')
+    db = connection.simple
+    return db
+
+
+def _default_redis(host=None, port=None):
+    # redis config
+    if host is None:
+        host = 'localhost'
+    if port is None:
+        port = 6379
+    r = redis.Redis(host, port)
+    return r
+
+
+def _default_req_count(r=None):
+    if r is None:
+        r = _default_redis()
+    return ReqCount(r, API_KEY)
+
+
+def _default_tk_alive(r=None):
+    if r is None:
+        r = _default_redis()
+    return TkAlive(r, API_KEY)
+
+
 if __name__ == '__main__':
     from logbook import FileHandler
     from logbook import Logger
@@ -113,7 +157,6 @@ if __name__ == '__main__':
     import redis
     import pymongo
 
-
     parser = ArgumentParser()
     parser.add_argument('--log', nargs=1, help='log path')
     args = parser.parse_args(sys.argv[1:])
@@ -122,27 +165,9 @@ if __name__ == '__main__':
 
     with log_handler.applicationbound():
         logbk.info('maintain prepare')
-        # redis config
-        api_key = '4131380600'
-        host = 'localhost'
-        port = 6379
-        logbk.info('Redis connect to {host}:{port}'.format(host=host, port=port), level=log.WARNING)
-        r = redis.Redis(host, port)
-
-        # mongod config
-        host = 'localhost'
-        port = 27017
-        connection = pymongo.Connection(host, port)
-        db = connection.admin
-        db.authenticate('root', 'root')
-        logbk.info('Mongod connect to {host}:{port}'.format(host=host, port=port), level=log.WARNING)
-        db = connection.simple
-
-        req_count = ReqCount(r, api_key)
-        tk_alive = TkAlive(r, api_key)
 
         at_least = 6
 
         logbk.info('maintain begin')
-        maintain(r, db, api_key, req_count, tk_alive, at_least=at_least, hourly=True, logbk=logbk)
+        maintain(at_least=at_least, hourly=True, logbk=logbk)
         logbk.info('maintain end')
