@@ -136,16 +136,20 @@ def _default_redis(host=None, port=None):
     return r
 
 
-def _default_req_count(r=None):
+def _default_req_count(r=None, api_key=None):
     if r is None:
         r = _default_redis()
-    return ReqCount(r, API_KEY)
+    if api_key is None:
+        api_key = API_KEY
+    return ReqCount(r, api_key)
 
 
-def _default_tk_alive(r=None):
+def _default_tk_alive(r=None, api_key=None):
     if r is None:
         r = _default_redis()
-    return TkAlive(r, API_KEY)
+    if api_key is None:
+        api_key = API_KEY
+    return TkAlive(r, api_key)
 
 
 if __name__ == '__main__':
