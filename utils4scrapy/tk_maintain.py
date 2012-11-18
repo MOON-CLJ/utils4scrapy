@@ -102,44 +102,32 @@ def one_valid_token(req_count, tk_alive):
 
 
 if __name__ == '__main__':
-    from logbook import FileHandler
-    from logbook import Logger
-    from argparse import ArgumentParser
     from req_count import ReqCount
-    import sys
     import redis
     import pymongo
 
-    parser = ArgumentParser()
-    parser.add_argument('--log', nargs=1, help='log path')
-    args = parser.parse_args(sys.argv[1:])
-    print args.log
-    log_handler = FileHandler(args.log[0])
-    logbk = Logger('Token Maintain')
+    print 'maintain prepare'
+    # redis config
+    api_key = '4131380600'
+    host = 'localhost'
+    port = 6379
+    print 'Redis connect to {host}:{port}'.format(host=host, port=port)
+    r = redis.Redis(host, port)
 
-    with log_handler.applicationbound():
-        logbk.info('maintain prepare')
-        # redis config
-        api_key = '4131380600'
-        host = 'localhost'
-        port = 6379
-        logbk.info('Redis connect to {host}:{port}'.format(host=host, port=port), level=log.WARNING)
-        r = redis.Redis(host, port)
+    # mongod config
+    host = 'localhost'
+    port = 27017
+    connection = pymongo.Connection(host, port)
+    db = connection.admin
+    db.authenticate('root', 'root')
+    print 'Mongod connect to {host}:{port}'.format(host=host, port=port)
+    db = connection.simple
 
-        # mongod config
-        host = 'localhost'
-        port = 27017
-        connection = pymongo.Connection(host, port)
-        db = connection.admin
-        db.authenticate('root', 'root')
-        logbk.info('Mongod connect to {host}:{port}'.format(host=host, port=port), level=log.WARNING)
-        db = connection.simple
+    req_count = ReqCount(r, api_key)
+    tk_alive = TkAlive(r, api_key)
 
-        req_count = ReqCount(r, api_key)
-        tk_alive = TkAlive(r, api_key)
+    at_least = 6
 
-        at_least = 6
-
-        logbk.info('maintain begin')
-        maintain(r, db, api_key, req_count, tk_alive, at_least=at_least, hourly=True)
-        logbk.info('maintain end')
+    print 'maintain begin'
+    maintain(r, db, api_key, req_count, tk_alive, at_least=at_least, hourly=True)
+    print 'maintain end'
