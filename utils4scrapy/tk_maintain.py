@@ -113,6 +113,7 @@ if __name__ == '__main__':
     import redis
     import pymongo
 
+
     parser = ArgumentParser()
     parser.add_argument('--log', nargs=1, help='log path')
     args = parser.parse_args(sys.argv[1:])
