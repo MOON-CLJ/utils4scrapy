@@ -2,6 +2,9 @@
 from scrapy.exceptions import CloseSpider
 from scrapy import log
 from tk_alive import TkAlive
+from req_count import ReqCount
+import redis
+import pymongo
 import simplejson as json
 import urllib3
 import time
@@ -157,10 +160,7 @@ if __name__ == '__main__':
     from logbook import FileHandler
     from logbook import Logger
     from argparse import ArgumentParser
-    from req_count import ReqCount
     import sys
-    import redis
-    import pymongo
 
     parser = ArgumentParser()
     parser.add_argument('--log', nargs=1, help='log path')
