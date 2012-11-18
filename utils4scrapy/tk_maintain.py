@@ -115,6 +115,7 @@ def one_valid_token(req_count, tk_alive):
 
 def _default_mongo(host=None, port=None):
     # mongod config
+    # notice this is collection simple
     if host is None:
         host = 'localhost'
     if port is None:
