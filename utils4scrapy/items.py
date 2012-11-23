@@ -26,15 +26,18 @@ class UserItem(Item):
     first_in = Field()
     last_modify = Field()
 
-    def __init__(self, *args, **kwargs):
-        self._values = {}
-        # set default
-        default_keys = ['followers', 'friends']
-        for key in default_keys:
-            self._values[key] = []
-        if args or kwargs:  # avoid creating dict for most common case
-            for k, v in dict(*args, **kwargs).iteritems():
-                self[k] = v
+    def __init__(self):
+        """
+        >>> a = UserItem()
+        >>> a
+        {'followers': [], 'friends': []}
+        >>> a.to_dict()
+        {'followers': [], 'friends': []}
+        """
+        super(UserItem, self).__init__()
+        default_empty_arr_keys = ['followers', 'friends']
+        for key in default_empty_arr_keys:
+            self.setdefault(key, [])
 
     def to_dict(self):
         d = {}
@@ -72,16 +75,11 @@ class WeiboItem(Item):
     first_in = Field()
     last_modify = Field()
 
-    def __init__(self, *args, **kwargs):
-        self._values = {}
-        # set default
-        default_keys = ['reposts', 'comments']
-        for key in default_keys:
-            self._values[key] = []
-
-        if args or kwargs:  # avoid creating dict for most common case
-            for k, v in dict(*args, **kwargs).iteritems():
-                self[k] = v
+    def __init__(self):
+        super(WeiboItem, self).__init__()
+        default_empty_arr_keys = ['reposts', 'comments']
+        for key in default_empty_arr_keys:
+            self.setdefault(key, [])
 
     def to_dict(self):
         d = {}
