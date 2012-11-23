@@ -66,6 +66,7 @@ def maintain(mongo=None, req_count=None, tk_alive=None, at_least=1, hourly=False
             tk_alive.hset(user['access_token'], user['expires_in'])
 
     tokens_in_redis = req_count.all_tokens()
+    print 'before alive:', len(tokens_in_redis)
     if logbk:
         logbk.info('before alive: %s' % len(tokens_in_redis))  # 清理之前
 
@@ -78,6 +79,7 @@ def maintain(mongo=None, req_count=None, tk_alive=None, at_least=1, hourly=False
             tk_alive.drop_tk(token)
 
     tokens_in_redis = req_count.all_tokens()
+    print 'after alive:', len(tokens_in_redis)
     if logbk:
         logbk.info('after alive: %s' % len(tokens_in_redis))  # 清理之后
 
