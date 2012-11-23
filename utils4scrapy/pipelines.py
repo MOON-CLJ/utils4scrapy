@@ -12,6 +12,38 @@ MONGOD_PORT = 27017
 class MongodbPipeline(object):
     """
     insert and update items to mongod
+    > use test
+    switched to db test
+    > db.simple.insert({a: 1})
+    > db.simple.find()
+    { "_id" : ObjectId("50af9034d086dd9cd0ba3275"), "a" : 1 }
+    > db.simple.update({"a": 1}, {$addToSet: {"b": 2}})
+    > db.simple.find()
+    { "_id" : ObjectId("50af9034d086dd9cd0ba3275"), "a" : 1, "b" : [ 2 ] }
+    > db.simple.update({"a": 1}, { $addToSet : { a : { $each : [ 3 , 5 , 6 ] }
+    > } })
+    Cannot apply $addToSet modifier to non-array
+    > db.simple.update({"a": 1}, { $addToSet : { b : { $each : [ 3 , 5 , 6 ] }
+    > } })
+    > db.simple.find()
+    { "_id" : ObjectId("50af9034d086dd9cd0ba3275"), "a" : 1, "b" : [ 2, 3, 5, 6 ] }
+    > db.simple.update({"a": 1}, { $addToSet : { b : { $each : [ 3 , 5 , 6 ] }
+    > } })
+    > db.simple.find()
+    { "_id" : ObjectId("50af9034d086dd9cd0ba3275"), "a" : 1, "b" : [ 2, 3, 5, 6 ] }
+    > db.simple.update({"a": 1}, { $addToSet : { a : { $each : [ 3 , 5 , 6 ] }
+    > } })
+    Cannot apply $addToSet modifier to non-array
+    > db.simple.update({"a": 1}, {$addToSet: {"b": [2,7]}})
+    > db.simple.find()
+    { "_id" : ObjectId("50af9034d086dd9cd0ba3275"), "a" : 1, "b" : [ 2, 3, 5, 6, [ 2, 7 ] ] }
+    > db.simple.update({"a": 1}, {$set: {"c": []}})
+    > db.simple.find()
+    { "_id" : ObjectId("50af9034d086dd9cd0ba3275"), "a" : 1, "b" : [ 2, 3, 5, 6, [ 2, 7 ] ], "c" : [ ] }
+    > db.simple.update({"a": 1}, { $addToSet : { c : { $each : [ 3 , 5 , 6 ] }
+    > } })
+    > db.simple.find()
+    { "_id" : ObjectId("50af9034d086dd9cd0ba3275"), "a" : 1, "b" : [ 2, 3, 5, 6, [ 2, 7 ] ], "c" : [ 3, 5, 6 ] }
     """
 
     def __init__(self):
@@ -38,29 +70,16 @@ class MongodbPipeline(object):
         weibo['_id'] = weibo['id']
 
         if self.db.master_timeline_weibo.find({'_id': weibo['_id']}).count():
-            old_weibo = self.db.master_timeline_weibo.find_one(
-                {'_id': weibo['_id']})
-
             update_keys = ['reposts_count', 'comments_count', 'attitudes_count']
             updates = {}
-
-            flag = False
-            for more_repost in weibo['reposts']:
-                if more_repost not in old_weibo['reposts']:
-                    old_weibo['reposts'].append(more_repost)
-                    flag = True
-            if flag:
-                updates['reposts'] = old_weibo['reposts']
-
             updates['last_modify'] = time.time()
-            # comments should update
             for key in update_keys:
-                if key in weibo and weibo[key] is not None \
-                        and (key not in old_weibo or weibo[key] != old_weibo[key]):
+                if weibo.get(key) is not None:
                     updates[key] = weibo[key]
 
-            self.db.master_timeline_weibo.update({'_id': weibo['_id']},
-                                                 {"$set": updates})
+            # reposts
+            updates_modifier = {'$set': updates, '$addToSet': {'reposts': {'$each': weibo['reposts']}}}
+            self.db.master_timeline_weibo.update({'_id': weibo['_id']}, updates_modifier)
         else:
             weibo['first_in'] = time.time()
             weibo['last_modify'] = weibo['first_in']
@@ -70,43 +89,23 @@ class MongodbPipeline(object):
         user = item.to_dict()
         user['_id'] = user['id']
         if self.db.master_timeline_user.find({'_id': user['_id']}).count():
-            old_user = self.db.master_timeline_user.find_one(
-                {'_id': user['_id']})
-
             update_keys = ['name', 'gender', 'province', 'city',
                            'location', 'description', 'verified', 'followers_count',
                            'statuses_count', 'friends_count', 'profile_image_url',
                            'bi_followers_count', 'verified', 'verified_reason', 'verified_type']
             updates = {}
-
-            flag = False
-            for more_follower in user['followers']:
-                if more_follower not in old_user['followers']:
-                    old_user['followers'].append(more_follower)
-                    flag = True
-            if flag:
-                updates['followers'] = old_user['followers']
-
-            flag = False
-            for more_friend in user['friends']:
-                if more_friend not in old_user['friends']:
-                    old_user['friends'].append(more_friend)
-                    flag = True
-            if flag:
-                updates['friends'] = old_user['friends']
-
             updates['last_modify'] = time.time()
-
             for key in update_keys:
-                if key in user and user[key] is not None \
-                        and (key not in old_user or user[key] != old_user[key]):
+                if user.get(key) is not None:
                     updates[key] = user[key]
 
-            self.db.master_timeline_user.update({'_id': user['_id']},
-                                                {"$set": updates})
-
+            updates_modifier = {'$set': updates,
+                                '$addToSet': {
+                                    'followers': {'$each': user['followers']},
+                                    'friends': {'$each': user['friends']}
+                                }}
+            self.db.master_timeline_user.update({'_id': user['_id']}, updates_modifier)
         else:
             user['first_in'] = time.time()
             user['last_modify'] = user['first_in']
-            user['active'] = False  # default
             self.db.master_timeline_user.insert(user)

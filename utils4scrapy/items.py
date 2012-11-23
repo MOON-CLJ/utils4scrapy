@@ -34,10 +34,13 @@ class UserItem(Item):
         >>> a.to_dict()
         {'followers': [], 'friends': []}
         """
+
         super(UserItem, self).__init__()
         default_empty_arr_keys = ['followers', 'friends']
         for key in default_empty_arr_keys:
             self.setdefault(key, [])
+
+        self.setdefault('active', False)
 
     def to_dict(self):
         d = {}
@@ -67,7 +70,7 @@ class WeiboItem(Item):
     emotions = Field()
     at_users = Field()
     repost_users = Field()
-    user = Field()
+    user = Field()  # 信息可能过期
     retweeted_status = Field()
     reposts = Field()  # just ids
     comments = Field()  # just ids
