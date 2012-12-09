@@ -33,11 +33,17 @@ def _default_redis(host=REDIS_HOST, port=REDIS_PORT):
     return redis.Redis(host, port)
 
 
-def _default_req_count(r=_default_redis(), api_key=API_KEY):
+def _default_req_count(r=None, api_key=API_KEY):
+    if r is None:
+        r = _default_redis()
+
     return ReqCount(r, api_key)
 
 
-def _default_tk_alive(r=_default_redis(), api_key=API_KEY):
+def _default_tk_alive(r=None, api_key=API_KEY):
+    if r is None:
+        r = _default_redis()
+
     return TkAlive(r, api_key)
 
 
@@ -72,7 +78,14 @@ def token_status(token):
             pass
 
 
-def maintain(mongo=_default_mongo(), req_count=_default_req_count(), tk_alive=_default_tk_alive(), at_least=1, hourly=False, logbk=None):
+def maintain(mongo=None, req_count=None, tk_alive=None, at_least=1, hourly=False, logbk=None):
+    if mongo is None:
+        mongo = _default_mongo()
+    if req_count is None:
+        req_count = _default_req_count()
+    if tk_alive is None:
+        tk_alive = _default_tk_alive()
+
     log.msg('[Token Maintain] begin maintain')
 
     # 从应用导入所有未过期的token，并初始使用次数为0，相应的alive为True
