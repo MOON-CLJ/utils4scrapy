@@ -3,8 +3,15 @@ from scrapy.conf import settings
 from tk_maintain import token_status, one_valid_token, \
     _default_redis, _default_req_count, _default_tk_alive, \
     HOURS_LIMIT, EXPIRED_TOKEN, INVALID_ACCESS_TOKEN
+from raven.handlers.logging import SentryHandler
+from raven import Client
+from raven.conf import setup_logging
+from scrapy.utils.reqser import request_to_dict
+import cPickle
+import logging
 import simplejson as json
 import time
+import sys
 
 
 # weibo apis default extras config
@@ -12,6 +19,15 @@ REDIS_HOST = 'localhost'
 REDIS_PORT = 6378
 API_KEY = '4131380600'
 BUFFER_SIZE = 100
+
+#develop
+#client = Client('http://e1b6b5f0d81e497799c667c1634eca22:facc62aa2c5c44c1a620bc33be8bb6d7@0.0.0.0:9000/2', string_max_length=sys.maxint)
+#prod
+client = Client('http://3349196dad314183ba8e07edcd95b884:feb54ca50ead45d2bef6e6571cf76229@0.0.0.0:9000/2', string_max_length=sys.maxint)
+
+handler = SentryHandler(client)
+setup_logging(handler)
+logger = logging.getLogger(__name__)
 
 
 class RequestTokenMiddleware(object):
@@ -68,3 +84,34 @@ class ErrorRequestMiddleware(object):
                 reason = resp.get('error')
                 log.msg(format='Drop token: %(token)s %(reason)s',
                         level=log.DEBUG, spider=spider, token=token, reason=reason)
+
+
+class SentrySpiderMiddleware(object):
+    def process_spider_exception(self, response, exception, spider):
+        logger.error('SentrySpiderMiddleware %s [%s]' % (exception, spider.name), exc_info=True, extra={
+            'culprit': 'SentrySpiderMiddleware/%s [spider: %s]' % (type(exception), spider.name),
+            'stack': True,
+            'data': {
+                'response': cPickle.dumps(response.body),
+                'request': cPickle.dumps(request_to_dict(response.request, spider)),
+                'exception': exception,
+                'spider': spider,
+            }
+        })
+
+        return None
+
+
+class SentryDownloaderMiddleware(object):
+    def process_exception(self, request, exception, spider):
+        logger.error('SentryDownloaderMiddleware %s [%s]' % (exception, spider.name), exc_info=True, extra={
+            'culprit': 'SentryDownloaderMiddleware/%s [spider: %s]' % (type(exception), spider.name),
+            'stack': True,
+            'data': {
+                'request': cPickle.dumps(request_to_dict(request, spider)),
+                'exception': exception,
+                'spider': spider,
+            }
+        })
+
+        return None
