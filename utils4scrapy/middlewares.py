@@ -19,11 +19,8 @@ REDIS_HOST = 'localhost'
 REDIS_PORT = 6378
 API_KEY = '4131380600'
 BUFFER_SIZE = 100
-
-#develop
-#client = Client('http://e1b6b5f0d81e497799c667c1634eca22:facc62aa2c5c44c1a620bc33be8bb6d7@0.0.0.0:9000/2', string_max_length=sys.maxint)
-#prod
-client = Client('http://3349196dad314183ba8e07edcd95b884:feb54ca50ead45d2bef6e6571cf76229@0.0.0.0:9000/2', string_max_length=sys.maxint)
+SENTRY_DSN_PROD = 'http://3349196dad314183ba8e07edcd95b884:feb54ca50ead45d2bef6e6571cf76229@0.0.0.0:9000/2'
+client = Client(settings.get('SENTRY_DSN', SENTRY_DSN_PROD), string_max_length=sys.maxint)
 
 handler = SentryHandler(client)
 setup_logging(handler)
