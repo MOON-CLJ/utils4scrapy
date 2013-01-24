@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from scrapy import log
 from scrapy.conf import settings
 from tk_maintain import token_status, one_valid_token, \
@@ -25,6 +27,47 @@ client = Client(settings.get('SENTRY_DSN', SENTRY_DSN_PROD), string_max_length=s
 handler = SentryHandler(client)
 setup_logging(handler)
 logger = logging.getLogger(__name__)
+
+"""
+raise ShouldNotEmptyError() in spider or spidermiddleware's process_spider_input()
+********************
+raise error
+** ** ** ** ** ** ** ** ** **
+SentrySpiderMiddleware process_spider_exception
+** ** ** ** ** ** ** ** ** **
+RetryErrorResponseMiddleware process_spider_exception
+2013-01-25 00:46:56+0800 [public_timeline] DEBUG: Retrying <GET https://api.weibo.com/2/statuses/public_timeline.json?count=200> (failed 1 times):
+2013-01-25 00:46:56+0800 [public_timeline] DEBUG: Request token: used: 526.0
+2013-01-25 00:46:58+0800 [public_timeline] DEBUG: Crawled (200) <GET https://api.weibo.com/2/statuses/public_timeline.json?count=200> (referer: None)
+********************
+raise error
+** ** ** ** ** ** ** ** ** **
+SentrySpiderMiddleware process_spider_exception
+** ** ** ** ** ** ** ** ** **
+RetryErrorResponseMiddleware process_spider_exception
+2013-01-25 00:46:59+0800 [public_timeline] DEBUG: Retrying <GET https://api.weibo.com/2/statuses/public_timeline.json?count=200> (failed 2 times):
+2013-01-25 00:46:59+0800 [public_timeline] DEBUG: Request token: used: 527.0
+2013-01-25 00:47:01+0800 [public_timeline] DEBUG: Crawled (200) <GET https://api.weibo.com/2/statuses/public_timeline.json?count=200> (referer: None)
+********************
+raise error
+** ** ** ** ** ** ** ** ** **
+SentrySpiderMiddleware process_spider_exception
+** ** ** ** ** ** ** ** ** **
+RetryErrorResponseMiddleware process_spider_exception
+2013-01-25 00:47:01+0800 [public_timeline] DEBUG: Gave up retrying <GET https://api.weibo.com/2/statuses/public_timeline.json?count=200> (failed 3 times):
+"""
+
+
+class InvalidTokenError(Exception):
+    """token过期或不合法"""
+
+
+class UnknownResponseError(Exception):
+    """未处理的错误"""
+
+
+class ShouldNotEmptyError(Exception):
+    """返回不应该为空，但是为空了，在spider里抛出"""
 
 
 class RequestTokenMiddleware(object):
@@ -71,16 +114,42 @@ class ErrorRequestMiddleware(object):
         self.tk_alive = _default_tk_alive(r=r, api_key=api_key)
 
     def process_spider_input(self, response, spider):
-        if response.status == 403:
-            resp = json.loads(response.body)
-            if resp.get('error_code') in [EXPIRED_TOKEN, INVALID_ACCESS_TOKEN]:
-                token = response.request.headers['Authorization'][7:]
-                self.req_count.delete(token)
-                self.tk_alive.drop_tk(token)
+        resp = json.loads(response.body)
+        if response.status == 403 and resp.get('error_code') in [EXPIRED_TOKEN, INVALID_ACCESS_TOKEN]:
+            token = response.request.headers['Authorization'][7:]
+            self.req_count.delete(token)
+            self.tk_alive.drop_tk(token)
 
-                reason = resp.get('error')
-                log.msg(format='Drop token: %(token)s %(reason)s',
-                        level=log.DEBUG, spider=spider, token=token, reason=reason)
+            reason = resp.get('error')
+            log.msg(format='Drop token: %(token)s %(reason)s',
+                    level=log.DEBUG, spider=spider, token=token, reason=reason)
+
+            raise InvalidTokenError('%s %s' % (token, reason))
+
+        elif resp.get('error'):
+            raise UnknownResponseError('%s %s' % (resp.get('error'), resp.get('error_code')))
+
+
+class RetryErrorResponseMiddleware(object):
+    def _retry(self, request, reason, spider):
+        retries = request.meta.get('retry_times', 0) + 1
+
+        if retries <= settings.get('RETRY_TIMES', 2):
+            log.msg(format="Retrying %(request)s (failed %(retries)d times): %(reason)s",
+                    level=log.DEBUG, spider=spider, request=request, retries=retries, reason=reason)
+            retryreq = request.copy()
+            retryreq.meta['retry_times'] = retries
+            retryreq.dont_filter = True
+            return retryreq
+        else:
+            log.msg(format="Gave up retrying %(request)s (failed %(retries)d times): %(reason)s",
+                    level=log.DEBUG, spider=spider, request=request, retries=retries, reason=reason)
+
+    def process_spider_exception(self, response, exception, spider):
+        if 'dont_retry' not in response.request.meta and \
+                isinstance(exception, InvalidTokenError) or isinstance(exception, UnknownResponseError) \
+                or isinstance(exception, ShouldNotEmptyError):
+            return [self._retry(response.request, exception, spider)]
 
 
 class SentrySpiderMiddleware(object):
@@ -96,8 +165,6 @@ class SentrySpiderMiddleware(object):
             }
         })
 
-        return None
-
 
 class SentryDownloaderMiddleware(object):
     def process_exception(self, request, exception, spider):
@@ -110,5 +177,3 @@ class SentryDownloaderMiddleware(object):
                 'spider': spider,
             }
         })
-
-        return None
