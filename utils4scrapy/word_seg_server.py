@@ -47,7 +47,7 @@ def word_seg(env, start_response):
 
 
 def main():
-    wsgi.server(eventlet.listen(('127.0.0.1', 8890)), word_seg, minimum_chunk_size=64)
+    wsgi.server(eventlet.listen(('0.0.0.0', 8890)), word_seg, minimum_chunk_size=64)
     return 0
 
 if __name__ == '__main__':
