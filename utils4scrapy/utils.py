@@ -13,7 +13,7 @@ WEIBO_KEYS = ['created_at', 'id', 'mid', 'text', 'source', 'reposts_count',
 USER_KEYS = ['id', 'name', 'gender', 'province', 'city', 'location',
              'description', 'verified', 'followers_count',
              'statuses_count', 'friends_count', 'profile_image_url',
-             'bi_followers_count', 'verified', 'verified_reason', 'verified_type']
+             'bi_followers_count', 'verified', 'verified_reason', 'verified_type', 'created_at']
 
 
 def resp2item_v2(resp, base_weibo=None):

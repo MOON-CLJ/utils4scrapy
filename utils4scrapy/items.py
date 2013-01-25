@@ -21,6 +21,7 @@ class UserItem(Item):
     bi_followers_count = Field()  # 互粉数
     followers = Field()  # just ids
     friends = Field()  # just ids
+    created_at = Field()
 
     active = Field()
     first_in = Field()
