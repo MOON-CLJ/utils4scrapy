@@ -27,6 +27,16 @@ class UserItem(Item):
     first_in = Field()
     last_modify = Field()
 
+    RESP_ITER_KEYS = ['id', 'name', 'gender', 'province', 'city', 'location',
+                      'description', 'verified', 'followers_count',
+                      'statuses_count', 'friends_count', 'profile_image_url',
+                      'bi_followers_count', 'verified', 'verified_reason', 'verified_type', 'created_at']
+
+    PIPED_UPDATE_KEYS = ['name', 'gender', 'province', 'city', 'location',
+                         'description', 'verified', 'followers_count',
+                         'statuses_count', 'friends_count', 'profile_image_url',
+                         'bi_followers_count', 'verified', 'verified_reason', 'verified_type', 'created_at']
+
     def __init__(self):
         """
         >>> a = UserItem()
@@ -78,6 +88,12 @@ class WeiboItem(Item):
 
     first_in = Field()
     last_modify = Field()
+
+    RESP_ITER_KEYS = ['created_at', 'id', 'mid', 'text', 'source', 'reposts_count',
+                      'comments_count', 'attitudes_count', 'geo']
+    PIPED_UPDATE_KEYS = ['reposts_count', 'comments_count', 'attitudes_count']
+
+
 
     def __init__(self):
         super(WeiboItem, self).__init__()

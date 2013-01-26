@@ -70,10 +70,10 @@ class MongodbPipeline(object):
         weibo['_id'] = weibo['id']
 
         if self.db.master_timeline_weibo.find({'_id': weibo['_id']}).count():
-            update_keys = ['reposts_count', 'comments_count', 'attitudes_count']
             updates = {}
             updates['last_modify'] = time.time()
-            for key in update_keys:
+            for key in WeiboItem.PIPED_UPDATE_KEYS:
+                # 如reposts这项的初始化是依赖[], 所以只是判断了不是None
                 if weibo.get(key) is not None:
                     updates[key] = weibo[key]
 
@@ -89,13 +89,10 @@ class MongodbPipeline(object):
         user = item.to_dict()
         user['_id'] = user['id']
         if self.db.master_timeline_user.find({'_id': user['_id']}).count():
-            update_keys = ['name', 'gender', 'province', 'city',
-                           'location', 'description', 'verified', 'followers_count',
-                           'statuses_count', 'friends_count', 'profile_image_url',
-                           'bi_followers_count', 'verified', 'verified_reason', 'verified_type', 'created_at']
             updates = {}
             updates['last_modify'] = time.time()
-            for key in update_keys:
+            for key in UserItem.PIPED_UPDATE_KEYS:
+                # 如followers这一项，初始化为[]
                 if user.get(key) is not None:
                     updates[key] = user[key]
 

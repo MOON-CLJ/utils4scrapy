@@ -8,14 +8,6 @@ from scrapy.exceptions import DropItem
 from repost_status import RepostStatus
 
 
-WEIBO_KEYS = ['created_at', 'id', 'mid', 'text', 'source', 'reposts_count',
-              'comments_count', 'attitudes_count', 'geo']
-USER_KEYS = ['id', 'name', 'gender', 'province', 'city', 'location',
-             'description', 'verified', 'followers_count',
-             'statuses_count', 'friends_count', 'profile_image_url',
-             'bi_followers_count', 'verified', 'verified_reason', 'verified_type', 'created_at']
-
-
 def resp2item_v2(resp, base_weibo=None):
     items = []
     if resp is None or 'deleted' in resp or 'mid' not in resp and 'name' not in resp:
@@ -23,7 +15,7 @@ def resp2item_v2(resp, base_weibo=None):
 
     if 'mid' in resp:
         weibo = WeiboItem()
-        for key in WEIBO_KEYS:
+        for key in WeiboItem.RESP_ITER_KEYS:
             weibo[key] = resp[key]
         weibo['timestamp'] = local2unix(weibo['created_at'])
 
@@ -35,7 +27,7 @@ def resp2item_v2(resp, base_weibo=None):
         items.extend(resp2item_v2(resp.get('retweeted_status'), weibo))
     else:
         user = UserItem()
-        for key in USER_KEYS:
+        for key in UserItem.RESP_ITER_KEYS:
             user[key] = resp[key]
 
         if base_weibo:
@@ -59,12 +51,12 @@ def resp2item(resp):
     if 'reposts_count' not in resp:
         raise DropItem('reposts_count')
 
-    for k in WEIBO_KEYS:
+    for k in WeiboItem.RESP_ITER_KEYS:
         weibo[k] = resp[k]
 
     weibo['timestamp'] = local2unix(weibo['created_at'])
 
-    for k in USER_KEYS:
+    for k in UserItem.RESP_ITER_KEYS:
         user[k] = resp['user'][k]
 
     weibo['user'] = user
@@ -74,11 +66,11 @@ def resp2item(resp):
         retweeted_status = WeiboItem()
         retweeted_user = UserItem()
 
-        for k in WEIBO_KEYS:
+        for k in WeiboItem.RESP_ITER_KEYS:
             retweeted_status[k] = resp['retweeted_status'][k]
         retweeted_status['timestamp'] = local2unix(retweeted_status['created_at'])
 
-        for k in USER_KEYS:
+        for k in UserItem.RESP_ITER_KEYS:
             retweeted_user[k] = resp['retweeted_status']['user'][k]
 
         retweeted_status['user'] = retweeted_user
