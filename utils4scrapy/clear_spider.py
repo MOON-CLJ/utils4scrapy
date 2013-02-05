@@ -26,7 +26,7 @@ host = REDIS_HOST
 port = REDIS_PORT
 r = _default_redis(host, port)
 
-print 'scheduled requests: %s' % r.zcard(DUPEFILTER_KEY % {'spider': spider_name})
+print 'scheduled requests: %s' % r.zcard(QUEUE_KEY % {'spider': spider_name})
 print 'dupefiler requests: %s' % r.scard(DUPEFILTER_KEY % {'spider': spider_name})
 
 if not not_del:
