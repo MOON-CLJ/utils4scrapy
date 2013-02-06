@@ -15,9 +15,9 @@ s = load_scws()
 def cut(text, f=None):
     global s
     if f:
-        return [token[0].decode('utf-8') for token in s.participle(text) if token[1] in f]
+        return [token[0].decode('utf-8') for token in s.participle(text) if token[1] in f and (token[0].isalnum() or len(token[0]) > 3)]
     else:
-        return [token[0].decode('utf-8') for token in s.participle(text)]
+        return [token[0].decode('utf-8') for token in s.participle(text) if token[0].isalnum() or len(token[0]) > 3]
 
 
 def word_seg(env, start_response):
