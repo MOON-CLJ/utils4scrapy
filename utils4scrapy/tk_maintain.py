@@ -21,11 +21,11 @@ MONGOD_PORT = 27017
 API_KEY = '4131380600'
 
 
-def _default_mongo(host=MONGOD_HOST, port=MONGOD_PORT, collection='simple'):
+def _default_mongo(host=MONGOD_HOST, port=MONGOD_PORT, usedb='simple'):
     connection = pymongo.Connection(host, port)
     db = connection.admin
     db.authenticate('root', 'root')
-    db = getattr(connection, collection)
+    db = getattr(connection, usedb)
     return db
 
 
