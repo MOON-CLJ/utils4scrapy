@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+
+# 手动清空requests队列和去重集合的脚本
 # usage: py clear_spider.py public_timeline [st]
 
 import sys
