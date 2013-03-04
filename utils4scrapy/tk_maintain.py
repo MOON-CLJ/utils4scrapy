@@ -22,7 +22,8 @@ API_KEY = '4131380600'
 
 
 def _default_mongo(host=MONGOD_HOST, port=MONGOD_PORT, usedb='simple'):
-    connection = pymongo.Connection(host, port)
+    # 强制写journal，并强制safe
+    connection = pymongo.MongoClient(host=host, port=port, j=True, w=1)
     db = connection.admin
     db.authenticate('root', 'root')
     db = getattr(connection, usedb)

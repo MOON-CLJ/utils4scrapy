@@ -47,9 +47,10 @@ class MongodbPipeline(object):
     """
 
     def __init__(self):
-        host = settings.get("MONGOD_HOST", MONGOD_HOST)
-        port = settings.get("MONGOD_PORT", MONGOD_PORT)
-        connection = pymongo.Connection(host, port)
+        host = settings.get('MONGOD_HOST', MONGOD_HOST)
+        port = settings.get('MONGOD_PORT', MONGOD_PORT)
+        # 强制写journal，并强制safe
+        connection = pymongo.MongoClient(host=host, port=port, j=True, w=1)
         db = connection.admin
         db.authenticate('root', 'root')
         log.msg('Mongod connect to {host}:{port}'.format(host=host, port=port), level=log.WARNING)
