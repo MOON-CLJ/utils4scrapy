@@ -21,28 +21,28 @@ def cut(text, f=None):
 
 
 def word_seg(env, start_response):
-    if env['PATH_INFO'] != '/seg':
-        start_response('404 Not Found', [('Content-Type', 'text/plain')])
-        return ['Not Found\r\n']
-
+    if env['REQUEST_METHOD'] != 'POST' or env['PATH_INFO'] != '/seg':
+        start_response('404 Not Found', [('Content-Type', 'application/json')])
+        return json.dumps({'status': 'not found'})
     try:
-        query_str = env['QUERY_STRING']
+        input_obj = env['wsgi.input']
+        query_str = input_obj.read()
         paras = query_str.split('&')
         text = None
         f = None
         for para in paras:
             key, value = para.split('=')
+            value = urllib.unquote_plus(value)
             if key == 'text':
                 text = value
             if key == 'f':
                 f = value.split(',')
-        text = urllib.unquote(text)
         words = cut(text, f=f)
-        start_response('200 OK', JSON_HEADER)
+        start_response('200 OK', [('Content-Type', 'application/json')])
         return json.dumps({'status': 'ok', 'words': words})
     except Exception, e:
         print e
-        start_response('500 Internal Server Error', JSON_HEADER)
+        start_response('200 OK', [('Content-Type', 'application/json')])
         return json.dumps({'status': 'error'})
 
 
