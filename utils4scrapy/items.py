@@ -90,10 +90,8 @@ class WeiboItem(Item):
     last_modify = Field()
 
     RESP_ITER_KEYS = ['created_at', 'id', 'mid', 'text', 'source', 'reposts_count',
-                      'comments_count', 'attitudes_count', 'geo']
+                      'comments_count', 'attitudes_count', 'geo', 'bmiddle_pic', 'original_pic']
     PIPED_UPDATE_KEYS = ['reposts_count', 'comments_count', 'attitudes_count']
-
-
 
     def __init__(self):
         super(WeiboItem, self).__init__()

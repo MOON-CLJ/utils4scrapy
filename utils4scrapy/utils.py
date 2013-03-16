@@ -13,7 +13,8 @@ def resp2item_v2(resp, base_weibo=None):
     if 'mid' in resp:
         weibo = WeiboItem()
         for key in WeiboItem.RESP_ITER_KEYS:
-            weibo[key] = resp[key]
+            if key in resp:
+                weibo[key] = resp[key]
         weibo['timestamp'] = local2unix(weibo['created_at'])
 
         if base_weibo:
