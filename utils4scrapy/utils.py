@@ -5,7 +5,7 @@ import simplejson as json
 from items import WeiboItem, UserItem
 
 
-def resp2item_v2(resp, base_weibo=None):
+def resp2item_v2(resp, base_weibo=None, base_user=None):
     items = []
     if resp is None or 'deleted' in resp or 'mid' not in resp and 'name' not in resp:
         return items
@@ -15,14 +15,16 @@ def resp2item_v2(resp, base_weibo=None):
         for key in WeiboItem.RESP_ITER_KEYS:
             if key in resp:
                 weibo[key] = resp[key]
+        if 'user' not in weibo:
+            weibo['user'] = base_user
         weibo['timestamp'] = local2unix(weibo['created_at'])
 
         if base_weibo:
             base_weibo['retweeted_status'] = weibo
 
         items.append(weibo)
-        items.extend(resp2item_v2(resp.get('user'), weibo))
-        items.extend(resp2item_v2(resp.get('retweeted_status'), weibo))
+        items.extend(resp2item_v2(resp.get('user'), base_weibo=weibo))
+        items.extend(resp2item_v2(resp.get('retweeted_status'), base_weibo=weibo))
     else:
         user = UserItem()
         for key in UserItem.RESP_ITER_KEYS:
@@ -32,7 +34,7 @@ def resp2item_v2(resp, base_weibo=None):
             base_weibo['user'] = user
 
         items.append(user)
-        items.extend(resp2item_v2(resp.get('status')))
+        items.extend(resp2item_v2(resp.get('status'), base_user=user))
 
     return items
 
@@ -43,19 +45,52 @@ def local2unix(time_str):
 
 
 if __name__ == '__main__':
-    # 1 public_timeline(weibo里有user)
+    import urllib2
+
+    access_token = '2.00OGiDACguGB4B084c90d75dJELeHB'
     """
-    weibo_str = r'{"created_at":"Sat Nov 24 14:18:42 +0800 2012","id":3515894033020645,"mid":"3515894033020645","idstr":"3515894033020645","text":"对门老爷爷90大寿。。。长寿面，寿桃。。。讨个吉利！@我不叫张小胡 @我也叫王震彬 @倩倩喵儿 @不入穴焉得子 @果冻莘妈妈 @小猪嘴xixi0","source":"<a href=\"http://www.samsung.com/cn/\" rel=\"nofollow\">三星Galaxy SIII</a>","favorited":false,"truncated":false,"in_reply_to_status_id":"","in_reply_to_user_id":"","in_reply_to_screen_name":"","thumbnail_pic":"http://ww2.sinaimg.cn/thumbnail/9339698cjw1dz63yoexqaj.jpg","bmiddle_pic":"http://ww2.sinaimg.cn/bmiddle/9339698cjw1dz63yoexqaj.jpg","original_pic":"http://ww2.sinaimg.cn/large/9339698cjw1dz63yoexqaj.jpg","geo":null,"user":{"id":2470013324,"idstr":"2470013324","screen_name":"miaow喵咪","name":"miaow喵咪","province":"32","city":"1000","location":"江苏","description":"💓我小小的幸福🎀有你的陪伴💏直到永远💍","url":"","profile_image_url":"http://tp1.sinaimg.cn/2470013324/50/5613817207/0","profile_url":"u/2470013324","domain":"","weihao":"","gender":"f","followers_count":593,"friends_count":450,"statuses_count":3922,"favourites_count":190,"created_at":"Sat Oct 15 20:58:18 +0800 2011","following":false,"allow_all_act_msg":false,"geo_enabled":true,"verified":false,"verified_type":220,"allow_all_comment":false,"avatar_large":"http://tp1.sinaimg.cn/2470013324/180/5613817207/0","verified_reason":"","follow_me":false,"online_status":0,"bi_followers_count":153,"lang":"zh-cn","star":0,"mbtype":0,"mbrank":0,"block_word":0},"reposts_count":0,"comments_count":0,"attitudes_count":0,"mlevel":0,"visible":{"type":0,"list_id":0}}'
+    # 1 public_timeline(weibo里有user)
+    url = 'https://api.weibo.com/2/statuses/public_timeline.json?access_token=%s' % access_token
+    resp = urllib2.urlopen(url).read()
+    resp = json.loads(resp)
+    resp = resp['statuses'][0]
     """
     """
     # 2 friendships/friends(user里有微博)
-    weibo_str = r'{"id":1662047260,"idstr":"1662047260","screen_name":"SinaAppEngine","name":"SinaAppEngine","province":"11","city":"8","location":"北京 海淀区","description":"Sina App Engine（简称SAE），简单高效的分布式Web服务开发、运行平台。\n新浪云平台Sina App Engine官网（...","url":"http://sae.sina.com.cn","profile_image_url":"http://tp1.sinaimg.cn/1662047260/50/5633919323/1","profile_url":"saet","domain":"saet","weihao":"","gender":"m","followers_count":199832,"friends_count":158,"statuses_count":4607,"favourites_count":17,"created_at":"Thu Nov 19 14:47:16 +0800 2009","following":false,"allow_all_act_msg":true,"geo_enabled":true,"verified":true,"verified_type":2,"status":{"created_at":"Sat Nov 24 10:00:12 +0800 2012","id":3515828978513205,"mid":"3515828978513205","idstr":"3515828978513205","text":"【#Web应用开发#】《7 款让人跃跃欲试的 jQuery 超炫插件》jQuery大大简化了我们的前端代码，因为jQuery的简单和开源，也涌现出了层出不穷的jQuery插件，这些实用的jQuery插件也不断推动着jQuery开源社区的发展。下面精选了几款让人跃跃欲试的jQuery实用插件，朋友们赶紧收藏吧。http://t.cn/zjUHL3I","source":"<a href=\"http://sae.sina.com.cn\" rel=\"nofollow\">SAE新浪云计算平台</a>","favorited":false,"truncated":false,"in_reply_to_status_id":"","in_reply_to_user_id":"","in_reply_to_screen_name":"","thumbnail_pic":"http://ww2.sinaimg.cn/thumbnail/6310d41cjw1dz506c6lqej.jpg","bmiddle_pic":"http://ww2.sinaimg.cn/bmiddle/6310d41cjw1dz506c6lqej.jpg","original_pic":"http://ww2.sinaimg.cn/large/6310d41cjw1dz506c6lqej.jpg","geo":null,"reposts_count":0,"comments_count":0,"attitudes_count":0,"mlevel":0,"visible":{"type":0,"list_id":0}},"allow_all_comment":true,"avatar_large":"http://tp1.sinaimg.cn/1662047260/180/5633919323/1","verified_reason":"Sina App Engine官方微博","follow_me":false,"online_status":0,"bi_followers_count":118,"lang":"zh-cn","star":0,"mbtype":0,"mbrank":0,"block_word":0}'
+    url = 'https://api.weibo.com/2/friendships/friends.json?uid=1870632073&access_token=%s&trim_status=0' % access_token
+    resp = urllib2.urlopen(url).read()
+    resp = json.loads(resp)
+    resp = resp['users'][0]
+    """
     """
     # 3 repost_timeline(weibo里有user和retweet_status, retweet_status里有user)
-    weibo_str = r'{"created_at":"Sat Nov 24 14:07:07 +0800 2012","id":3515891121130294,"mid":"3515891121130294","idstr":"3515891121130294","text":"转发微博","source":"<a href=\"\" rel=\"nofollow\">未通过审核应用</a>","favorited":false,"truncated":false,"in_reply_to_status_id":"","in_reply_to_user_id":"","in_reply_to_screen_name":"","geo":null,"user":{"id":3075030277,"idstr":"3075030277","screen_name":"xcode2012神探","name":"xcode2012神探","province":"11","city":"8","location":"北京 海淀区","description":"","url":"","profile_image_url":"http://tp2.sinaimg.cn/3075030277/50/0/1","profile_url":"u/3075030277","domain":"","weihao":"","gender":"m","followers_count":22,"friends_count":99,"statuses_count":24,"favourites_count":0,"created_at":"Mon Oct 29 16:40:09 +0800 2012","following":false,"allow_all_act_msg":false,"geo_enabled":true,"verified":false,"verified_type":-1,"remark":"","allow_all_comment":true,"avatar_large":"http://tp2.sinaimg.cn/3075030277/180/0/1","verified_reason":"","follow_me":false,"online_status":1,"bi_followers_count":7,"lang":"zh-cn","star":0,"mbtype":0,"mbrank":0,"block_word":0},"retweeted_status":{"created_at":"Tue Aug 21 14:48:20 +0800 2012","id":3481474642286341,"mid":"3481474642286341","idstr":"3481474642286341","text":"【平台公告】微博开放平台问答系统正式上线！开发者可在本系统提出任何和新浪微博开放平台有关的问题，会有热心的用户及专业客服为您及时解答。问答系统地址：http://t.cn/zWHICRh","source":"<a href=\"http://e.weibo.com\" rel=\"nofollow\">专业版微博</a>","favorited":false,"truncated":false,"in_reply_to_status_id":"","in_reply_to_user_id":"","in_reply_to_screen_name":"","thumbnail_pic":"http://ww2.sinaimg.cn/thumbnail/717f7411jw1dw4axx332rj.jpg","bmiddle_pic":"http://ww2.sinaimg.cn/bmiddle/717f7411jw1dw4axx332rj.jpg","original_pic":"http://ww2.sinaimg.cn/large/717f7411jw1dw4axx332rj.jpg","geo":null,"user":{"id":1904178193,"idstr":"1904178193","screen_name":"微博开放平台","name":"微博开放平台","province":"11","city":"8","location":"北京 海淀区","description":"#平台沙龙两周年#每期沙龙都离不开热爱平台的朋友们，您是否记得2010年10月初次相聚，我们一起见证平台启程；两年间，平台与开发者一同发...","url":"","profile_image_url":"http://tp2.sinaimg.cn/1904178193/50/5610154048/0","profile_url":"openapi","domain":"openapi","weihao":"","gender":"f","followers_count":60031,"friends_count":47,"statuses_count":1037,"favourites_count":2,"created_at":"Mon Dec 27 17:56:46 +0800 2010","following":true,"allow_all_act_msg":false,"geo_enabled":true,"verified":true,"verified_type":2,"remark":"","allow_all_comment":false,"avatar_large":"http://tp2.sinaimg.cn/1904178193/180/5610154048/0","verified_reason":"新浪微博开放平台","follow_me":false,"online_status":0,"bi_followers_count":38,"lang":"zh-cn","star":0,"mbtype":0,"mbrank":0,"block_word":0},"reposts_count":615,"comments_count":49,"attitudes_count":0,"mlevel":0,"visible":{"type":0,"list_id":0}},"reposts_count":0,"comments_count":0,"attitudes_count":0,"mlevel":0,"visible":{"type":0,"list_id":0}}'
-    weibo = json.loads(weibo_str)
-    items = resp2item_v2(weibo)
+    url = 'https://api.weibo.com/2/friendships/friends.json?uid=1870632073&access_token=%s&trim_status=0' % access_token
+    url = 'https://api.weibo.com/2/statuses/repost_timeline.json?id=3481474642286341&access_token=%s' % access_token
+    resp = urllib2.urlopen(url).read()
+    resp = json.loads(resp)
+    resp = resp['reposts'][0]
+    """
+    """
+    # 4 /users/show(user里有微博，但是weibo的字段里缺user这个字段)
+    url = 'https://api.weibo.com/2/users/show.json?uid=1904178193&access_token=%s' % access_token
+    resp = urllib2.urlopen(url).read()
+    resp = json.loads(resp)
+    """
+
+    # 5 /statuses/show(类似repost_timeline)
+    url = 'https://api.weibo.com/2/statuses/show.json?id=3481475946781445&access_token=%s' % access_token
+    resp = urllib2.urlopen(url).read()
+    resp = json.loads(resp)
+
+    items = resp2item_v2(resp)
     for item in items:
         print "** " * 10
-        print item
+        if isinstance(item, UserItem):
+            if item.keys().sort() != UserItem.RESP_ITER_KEYS.sort():
+                print item.keys()
+                raise
+        elif isinstance(item, WeiboItem):
+            if item.keys().sort() != WeiboItem.RESP_ITER_KEYS.sort():
+                print item.keys()
+                raise
     print len(items)

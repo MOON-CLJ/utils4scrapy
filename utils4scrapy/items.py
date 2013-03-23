@@ -30,7 +30,7 @@ class UserItem(Item):
     RESP_ITER_KEYS = ['id', 'name', 'gender', 'province', 'city', 'location',
                       'description', 'verified', 'followers_count',
                       'statuses_count', 'friends_count', 'profile_image_url',
-                      'bi_followers_count', 'verified', 'verified_reason', 'verified_type', 'created_at']
+                      'bi_followers_count', 'verified_reason', 'verified_type', 'created_at']
 
     PIPED_UPDATE_KEYS = ['name', 'gender', 'province', 'city', 'location',
                          'description', 'verified', 'followers_count',
