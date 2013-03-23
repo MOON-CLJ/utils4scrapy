@@ -76,11 +76,13 @@ class WeiboItem(Item):
     bmiddle_pic = Field()
     original_pic = Field()
     geo = Field()
+    #  预留字段，不写入数据
     urls = Field()
     hashtags = Field()
     emotions = Field()
     at_users = Field()
     repost_users = Field()
+    #
     user = Field()  # 信息可能过期
     retweeted_status = Field()
     reposts = Field()  # just ids
