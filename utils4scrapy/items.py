@@ -56,7 +56,7 @@ class UserItem(Item):
     def to_dict(self):
         d = {}
         for k, v in self.items():
-            if type(v) in [UserItem, WeiboItem]:
+            if isinstance(v, (UserItem, WeiboItem)):
                 d[k] = v.to_dict()
             else:
                 d[k] = v
@@ -104,7 +104,7 @@ class WeiboItem(Item):
     def to_dict(self):
         d = {}
         for k, v in self.items():
-            if type(v) in [UserItem, WeiboItem]:
+            if isinstance(v, (UserItem, WeiboItem)):
                 d[k] = v.to_dict()
             else:
                 d[k] = v
