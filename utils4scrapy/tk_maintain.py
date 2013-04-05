@@ -25,6 +25,7 @@ API_KEY = '4131380600'
 API_KEY = '1966311272'
 """
 
+
 def _default_mongo(host=MONGOD_HOST, port=MONGOD_PORT, usedb='simple'):
     # 强制写journal，并强制safe
     connection = pymongo.MongoClient(host=host, port=port, j=True, w=1)
@@ -60,9 +61,9 @@ def token_status(token):
             raise CloseSpider('CHECK LIMIT STATUS FAIL')
 
         try:
-            log.msg("[Token Status] token: {token}, sleep one second, wait to check".format(token=token))
+            log.msg("[Token Status] token: {token}, sleep one second, wait to check".format(token=token), level=log.INFO)
             time.sleep(1)
-            log.msg("[Token Status] now check")
+            log.msg("[Token Status] now check", level=log.INFO)
 
             http = urllib3.PoolManager()
             resp = http.request('GET', LIMIT_URL.format(access_token=token))
@@ -91,7 +92,7 @@ def maintain(mongo=None, req_count=None, tk_alive=None, at_least=1, hourly=False
     if tk_alive is None:
         tk_alive = _default_tk_alive()
 
-    log.msg('[Token Maintain] begin maintain')
+    log.msg('[Token Maintain] begin maintain', level=log.INFO)
 
     # 从应用导入所有未过期的token，并初始使用次数为0，相应的alive为True
     for user in mongo.users.find():
@@ -120,11 +121,11 @@ def maintain(mongo=None, req_count=None, tk_alive=None, at_least=1, hourly=False
     if alive_count < at_least:
         raise CloseSpider('TOKENS COUNT NOT REACH AT_LEAST')
 
-    log.msg('[Token Maintain] end maintain')
+    log.msg('[Token Maintain] end maintain', level=log.INFO)
 
 
 def calibration(req_count, tk_alive):
-    log.msg('[Token Maintain] begin calibration')
+    log.msg('[Token Maintain] begin calibration', level=log.INFO)
     tokens_in_redis = req_count.all_tokens()
     for token in tokens_in_redis:
         tk_status = token_status(token)
@@ -136,7 +137,7 @@ def calibration(req_count, tk_alive):
         _, remaining = tk_status
         req_count.set(token, HOURS_LIMIT - remaining)
 
-    log.msg('[Token Maintain] end calibration')
+    log.msg('[Token Maintain] end calibration', level=log.INFO)
 
 
 def one_valid_token(req_count, tk_alive):

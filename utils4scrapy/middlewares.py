@@ -100,7 +100,7 @@ class RequestTokenMiddleware(object):
                 time.sleep(reset_time_in)
 
         log.msg(format='Request token: %(token)s used: %(used)s',
-                level=log.DEBUG, spider=spider, token=token, used=used)
+                level=log.INFO, spider=spider, token=token, used=used)
         request.headers['Authorization'] = 'OAuth2 %s' % token
 
 
@@ -122,7 +122,7 @@ class ErrorRequestMiddleware(object):
 
             reason = resp.get('error')
             log.msg(format='Drop token: %(token)s %(reason)s',
-                    level=log.DEBUG, spider=spider, token=token, reason=reason)
+                    level=log.INFO, spider=spider, token=token, reason=reason)
 
             raise InvalidTokenError('%s %s' % (token, reason))
 
@@ -136,14 +136,14 @@ class RetryErrorResponseMiddleware(object):
 
         if retries <= settings.get('RETRY_TIMES', 2):
             log.msg(format="Retrying %(request)s (failed %(retries)d times): %(reason)s",
-                    level=log.DEBUG, spider=spider, request=request, retries=retries, reason=reason)
+                    level=log.WARNING, spider=spider, request=request, retries=retries, reason=reason)
             retryreq = request.copy()
             retryreq.meta['retry_times'] = retries
             retryreq.dont_filter = True
             return retryreq
         else:
             log.msg(format="Gave up retrying %(request)s (failed %(retries)d times): %(reason)s",
-                    level=log.DEBUG, spider=spider, request=request, retries=retries, reason=reason)
+                    level=log.ERROR, spider=spider, request=request, retries=retries, reason=reason)
 
     def process_spider_exception(self, response, exception, spider):
         if 'dont_retry' not in response.request.meta and \

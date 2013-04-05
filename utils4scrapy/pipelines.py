@@ -53,7 +53,7 @@ class MongodbPipeline(object):
         connection = pymongo.MongoClient(host=host, port=port, j=True, w=1)
         db = connection.admin
         db.authenticate('root', 'root')
-        log.msg('Mongod connect to {host}:{port}'.format(host=host, port=port), level=log.WARNING)
+        log.msg('Mongod connect to {host}:{port}'.format(host=host, port=port), level=log.INFO)
 
         db = connection.master_timeline
         self.db = db
