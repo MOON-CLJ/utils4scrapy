@@ -6,6 +6,7 @@ setup(name='utils4scrapy',
       install_requires=[
           'simplejson',
           'pymongo',
+          'urllib3',
           'redis'
       ],
       packages=['utils4scrapy'],
