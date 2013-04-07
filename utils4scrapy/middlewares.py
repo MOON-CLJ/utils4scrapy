@@ -88,6 +88,9 @@ class RequestTokenMiddleware(object):
                 if tk_status in [EXPIRED_TOKEN, INVALID_ACCESS_TOKEN]:
                     self.req_count.delete(token)
                     self.tk_alive.drop_tk(token)
+                    log.msg(format='Delete token: %(token)s',
+                            level=log.INFO, spider=spider, token=token)
+
                     token, used = one_valid_token(self.req_count, self.tk_alive)
                 else:
                     break
