@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from scrapy import log
-from scrapy.conf import settings
-from tk_maintain import token_status, one_valid_token, \
+from scrapy.exceptions import CloseSpider
+from tk_maintain import token_status, one_valid_token, calibration, \
     _default_redis, _default_req_count, _default_tk_alive, \
-    HOURS_LIMIT, EXPIRED_TOKEN, INVALID_ACCESS_TOKEN
+    EXPIRED_TOKEN, INVALID_ACCESS_TOKEN
 from raven.handlers.logging import SentryHandler
 from raven import Client
 from raven.conf import setup_logging
@@ -16,17 +16,7 @@ import time
 import sys
 
 
-# weibo apis default extras config
-REDIS_HOST = 'localhost'
-REDIS_PORT = 6378
-API_KEY = '4131380600'
 BUFFER_SIZE = 100
-SENTRY_DSN_PROD = 'http://3349196dad314183ba8e07edcd95b884:feb54ca50ead45d2bef6e6571cf76229@219.224.135.60:9000/2'
-client = Client(settings.get('SENTRY_DSN', SENTRY_DSN_PROD), string_max_length=sys.maxint)
-
-handler = SentryHandler(client)
-setup_logging(handler)
-logger = logging.getLogger(__name__)
 
 """
 raise ShouldNotEmptyError() in spider or spidermiddleware's process_spider_input()
@@ -71,30 +61,36 @@ class ShouldNotEmptyError(Exception):
 
 
 class RequestTokenMiddleware(object):
-    def __init__(self):
-        host = settings.get('REDIS_HOST', REDIS_HOST)
-        port = settings.get('REDIS_PORT', REDIS_PORT)
-        api_key = settings.get('API_KEY', API_KEY)
+    def __init__(self, host, port, api_key, per_token_hours_limit, buffer_size):
         r = _default_redis(host, port)
-        self.req_count = _default_req_count(r=r, api_key=api_key)
-        self.tk_alive = _default_tk_alive(r=r, api_key=api_key)
+        self.req_count = _default_req_count(r, api_key=api_key)
+        self.tk_alive = _default_tk_alive(r, api_key=api_key)
+        self.per_token_hours_limit = per_token_hours_limit
+        self.buffer_size = buffer_size
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        settings = crawler.settings
+        host = settings.get('REDIS_HOST')
+        port = settings.get('REDIS_PORT')
+        api_key = settings.get('API_KEY')
+        per_token_hours_limit = settings.get('PER_TOKEN_HOURS_LIMIT')
+        buffer_size = settings.get('BUFFER_SIZE')
+        return cls(host, port, api_key, per_token_hours_limit, buffer_size)
 
     def process_request(self, request, spider):
-        token, used = one_valid_token(self.req_count, self.tk_alive)
+        token_and_used = one_valid_token(self.req_count, self.tk_alive)
+        if token_and_used is None:
+            log.msg(format='No token alive',
+                    level=log.INFO, spider=spider)
 
-        if used > HOURS_LIMIT - BUFFER_SIZE:
-            while 1:
-                tk_status = token_status(token)
-                if tk_status in [EXPIRED_TOKEN, INVALID_ACCESS_TOKEN]:
-                    self.req_count.delete(token)
-                    self.tk_alive.drop_tk(token)
-                    log.msg(format='Delete token: %(token)s',
-                            level=log.INFO, spider=spider, token=token)
+            raise CloseSpider('No Token Alive')
+        token, used = token_and_used
 
-                    token, used = one_valid_token(self.req_count, self.tk_alive)
-                else:
-                    break
-
+        if used > self.per_token_hours_limit - self.buffer_size:
+            calibration(self.req_count, self.tk_alive, self.per_token_hours_limit)
+            token, _ = one_valid_token(self.req_count, self.tk_alive)
+            tk_status = token_status(token)
             reset_time_in, remaining = tk_status
             if remaining < BUFFER_SIZE:
                 log.msg(format='REACH API LIMIT, SLEEP %(reset_time_in)s SECONDS',
@@ -108,13 +104,18 @@ class RequestTokenMiddleware(object):
 
 
 class ErrorRequestMiddleware(object):
-    def __init__(self):
-        host = settings.get('REDIS_HOST', REDIS_HOST)
-        port = settings.get('REDIS_PORT', REDIS_PORT)
-        api_key = settings.get('API_KEY', API_KEY)
+    def __init__(self, host, port, api_key):
         r = _default_redis(host, port)
-        self.req_count = _default_req_count(r=r, api_key=api_key)
-        self.tk_alive = _default_tk_alive(r=r, api_key=api_key)
+        self.req_count = _default_req_count(r, api_key=api_key)
+        self.tk_alive = _default_tk_alive(r, api_key=api_key)
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        settings = crawler.settings
+        host = settings.get('REDIS_HOST')
+        port = settings.get('REDIS_PORT')
+        api_key = settings.get('API_KEY')
+        return cls(host, port, api_key)
 
     def process_spider_input(self, response, spider):
         resp = json.loads(response.body)
@@ -134,10 +135,19 @@ class ErrorRequestMiddleware(object):
 
 
 class RetryErrorResponseMiddleware(object):
+    def __init__(self, retry_times):
+        self.retry_times = retry_times
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        settings = crawler.settings
+        retry_times = settings.get('RETRY_TIMES', 2)
+        return cls(retry_times)
+
     def _retry(self, request, reason, spider):
         retries = request.meta.get('retry_times', 0) + 1
 
-        if retries <= settings.get('RETRY_TIMES', 2):
+        if retries <= self.retry_times:
             log.msg(format="Retrying %(request)s (failed %(retries)d times): %(reason)s",
                     level=log.WARNING, spider=spider, request=request, retries=retries, reason=reason)
             retryreq = request.copy()
@@ -156,8 +166,21 @@ class RetryErrorResponseMiddleware(object):
 
 
 class SentrySpiderMiddleware(object):
+    def __init__(self, sentry_dsn):
+        client = Client(sentry_dsn, string_max_length=sys.maxint)
+
+        handler = SentryHandler(client)
+        setup_logging(handler)
+        self.logger = logging.getLogger(__name__)
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        settings = crawler.settings
+        sentry_dsn = settings.get('SENTRY_DSN')
+        return cls(sentry_dsn)
+
     def process_spider_exception(self, response, exception, spider):
-        logger.error('SentrySpiderMiddleware %s [%s]' % (exception, spider.name), exc_info=True, extra={
+        self.logger.error('SentrySpiderMiddleware %s [%s]' % (exception, spider.name), exc_info=True, extra={
             'culprit': 'SentrySpiderMiddleware/%s [spider: %s]' % (type(exception), spider.name),
             'stack': True,
             'data': {
@@ -170,8 +193,21 @@ class SentrySpiderMiddleware(object):
 
 
 class SentryDownloaderMiddleware(object):
+    def __init__(self, sentry_dsn):
+        client = Client(sentry_dsn, string_max_length=sys.maxint)
+
+        handler = SentryHandler(client)
+        setup_logging(handler)
+        self.logger = logging.getLogger(__name__)
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        settings = crawler.settings
+        sentry_dsn = settings.get('SENTRY_DSN')
+        return cls(sentry_dsn)
+
     def process_exception(self, request, exception, spider):
-        logger.error('SentryDownloaderMiddleware %s [%s]' % (exception, spider.name), exc_info=True, extra={
+        self.logger.error('SentryDownloaderMiddleware %s [%s]' % (exception, spider.name), exc_info=True, extra={
             'culprit': 'SentryDownloaderMiddleware/%s [spider: %s]' % (type(exception), spider.name),
             'stack': True,
             'data': {

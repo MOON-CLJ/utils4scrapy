@@ -24,9 +24,7 @@ not_del = False
 if len(sys.argv) > 2 and sys.argv[2] == 'st':
     not_del = True
 
-host = REDIS_HOST
-port = REDIS_PORT
-r = _default_redis(host, port)
+r = _default_redis(REDIS_HOST, REDIS_PORT)
 
 print 'scheduled requests: %s' % r.zcard(QUEUE_KEY % {'spider': spider_name})
 print 'dupefiler requests: %s' % r.scard(DUPEFILTER_KEY % {'spider': spider_name})

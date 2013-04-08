@@ -13,15 +13,20 @@ import socket
 LIMIT_URL = 'https://api.weibo.com/2/account/rate_limit_status.json?access_token={access_token}'
 EXPIRED_TOKEN = 21327
 INVALID_ACCESS_TOKEN = 21332
-HOURS_LIMIT = 1000
 REDIS_HOST = 'localhost'
 REDIS_PORT = 6379
 MONGOD_HOST = 'localhost'
 MONGOD_PORT = 27017
+
 # prod
+PER_TOKEN_HOURS_LIMIT = 1000
+AT_LEAST_TOKEN_COUNT = 6
 API_KEY = '4131380600'
+
 """
 # dev
+PER_TOKEN_HOURS_LIMIT = 150
+AT_LEAST_TOKEN_COUNT = 1
 API_KEY = '1966311272'
 """
 
@@ -39,17 +44,11 @@ def _default_redis(host=REDIS_HOST, port=REDIS_PORT):
     return redis.Redis(host, port)
 
 
-def _default_req_count(r=None, api_key=API_KEY):
-    if r is None:
-        r = _default_redis()
-
+def _default_req_count(r, api_key=API_KEY):
     return ReqCount(r, api_key)
 
 
-def _default_tk_alive(r=None, api_key=API_KEY):
-    if r is None:
-        r = _default_redis()
-
+def _default_tk_alive(r, api_key=API_KEY):
     return TkAlive(r, api_key)
 
 
@@ -84,13 +83,11 @@ def token_status(token):
             pass
 
 
-def maintain(mongo=None, req_count=None, tk_alive=None, at_least=1, hourly=False, logbk=None):
-    if mongo is None:
-        mongo = _default_mongo()
-    if req_count is None:
-        req_count = _default_req_count()
-    if tk_alive is None:
-        tk_alive = _default_tk_alive()
+def maintain(at_least=1, hourly=False, logbk=None):
+    r = _default_redis()
+    mongo = _default_mongo()
+    req_count = _default_req_count(r)
+    tk_alive = _default_tk_alive(r)
 
     log.msg('[Token Maintain] begin maintain', level=log.INFO)
 
@@ -107,7 +104,7 @@ def maintain(mongo=None, req_count=None, tk_alive=None, at_least=1, hourly=False
 
     alive_count = 0
     for token in tokens_in_redis:
-        if tk_alive.isalive(token, hourly=True):
+        if tk_alive.isalive(token, hourly=hourly):
             alive_count += 1
         else:
             req_count.delete(token)
@@ -124,7 +121,7 @@ def maintain(mongo=None, req_count=None, tk_alive=None, at_least=1, hourly=False
     log.msg('[Token Maintain] end maintain', level=log.INFO)
 
 
-def calibration(req_count, tk_alive):
+def calibration(req_count, tk_alive, per_token_hours_limit):
     log.msg('[Token Maintain] begin calibration', level=log.INFO)
     tokens_in_redis = req_count.all_tokens()
     for token in tokens_in_redis:
@@ -135,7 +132,7 @@ def calibration(req_count, tk_alive):
             continue
 
         _, remaining = tk_status
-        req_count.set(token, HOURS_LIMIT - remaining)
+        req_count.set(token, per_token_hours_limit - remaining)
 
     log.msg('[Token Maintain] end calibration', level=log.INFO)
 
@@ -144,8 +141,8 @@ def one_valid_token(req_count, tk_alive):
     while 1:
         token, used = req_count.one_token()
         if not token:
-            raise CloseSpider('No Token Alive')
-        elif token and not tk_alive.isalive(token):
+            return None
+        elif not tk_alive.isalive(token):
             req_count.delete(token)
             tk_alive.drop_tk(token)
             continue
@@ -168,7 +165,7 @@ if __name__ == '__main__':
     with log_handler.applicationbound():
         logbk.info('maintain prepare')
 
-        at_least = 6
+        at_least = AT_LEAST_TOKEN_COUNT
 
         logbk.info('maintain begin')
         maintain(at_least=at_least, hourly=True, logbk=logbk)
