@@ -13,6 +13,9 @@ import socket
 LIMIT_URL = 'https://api.weibo.com/2/account/rate_limit_status.json?access_token={access_token}'
 EXPIRED_TOKEN = 21327
 INVALID_ACCESS_TOKEN = 21332
+REACH_IP_LIMIT = 10022
+REACH_PER_TOKEN_LIMIT = 10023
+REACH_PER_TOKEN_LIMIT_1 = 10024
 REDIS_HOST = 'localhost'
 REDIS_PORT = 6379
 MONGOD_HOST = 'localhost'
@@ -23,8 +26,8 @@ PER_TOKEN_HOURS_LIMIT = 1000
 AT_LEAST_TOKEN_COUNT = 6
 API_KEY = '4131380600'
 
-"""
 # dev
+"""
 PER_TOKEN_HOURS_LIMIT = 150
 AT_LEAST_TOKEN_COUNT = 1
 API_KEY = '1966311272'

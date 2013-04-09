@@ -4,7 +4,7 @@ from scrapy import log
 from scrapy.exceptions import CloseSpider
 from tk_maintain import token_status, one_valid_token, calibration, \
     _default_redis, _default_req_count, _default_tk_alive, \
-    EXPIRED_TOKEN, INVALID_ACCESS_TOKEN
+    EXPIRED_TOKEN, INVALID_ACCESS_TOKEN, REACH_IP_LIMIT, REACH_PER_TOKEN_LIMIT, REACH_PER_TOKEN_LIMIT_1
 from raven.handlers.logging import SentryHandler
 from raven import Client
 from raven.conf import setup_logging
@@ -93,8 +93,8 @@ class RequestTokenMiddleware(object):
             tk_status = token_status(token)
             reset_time_in, remaining = tk_status
             if remaining < BUFFER_SIZE:
-                log.msg(format='REACH API LIMIT, SLEEP %(reset_time_in)s SECONDS',
-                        level=log.WARNING, spider=spider, token=token, used=used)
+                log.msg(format='REACH API REQUEST BUFFER, SLEEP %(reset_time_in)s SECONDS',
+                        level=log.WARNING, spider=spider, reset_time_in=reset_time_in)
 
                 time.sleep(reset_time_in)
 
@@ -119,18 +119,27 @@ class ErrorRequestMiddleware(object):
 
     def process_spider_input(self, response, spider):
         resp = json.loads(response.body)
-        if response.status == 403 and resp.get('error_code') in [EXPIRED_TOKEN, INVALID_ACCESS_TOKEN]:
-            token = response.request.headers['Authorization'][7:]
-            self.req_count.delete(token)
-            self.tk_alive.drop_tk(token)
-
+        if response.status == 403:
             reason = resp.get('error')
-            log.msg(format='Drop token: %(token)s %(reason)s',
-                    level=log.INFO, spider=spider, token=token, reason=reason)
+            if resp.get('error_code') in [EXPIRED_TOKEN, INVALID_ACCESS_TOKEN]:
+                token = response.request.headers['Authorization'][7:]
+                self.req_count.delete(token)
+                self.tk_alive.drop_tk(token)
+                log.msg(format='Drop token: %(token)s %(reason)s',
+                        level=log.INFO, spider=spider, token=token, reason=reason)
+
+            if resp.get('error_code') in [REACH_IP_LIMIT, REACH_PER_TOKEN_LIMIT, REACH_PER_TOKEN_LIMIT_1]:
+                log.msg(format='REACH API LIMIT, SLEEP 60*60 SECONDS %(error)s %(error_code)s',
+                        level=log.WARNING, spider=spider, error=resp.get('error'), error_code=resp.get('error_code'))
+
+                time.sleep(3600)
 
             raise InvalidTokenError('%s %s' % (token, reason))
 
         elif resp.get('error'):
+            log.msg(format='UnknownResponseError: %(error)s %(error_code)s',
+                    level=log.ERROR, spider=spider, error=resp.get('error'), error_code=resp.get('error_code'))
+
             raise UnknownResponseError('%s %s' % (resp.get('error'), resp.get('error_code')))
 
 
