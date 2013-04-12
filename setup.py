@@ -8,7 +8,8 @@ setup(name='utils4scrapy',
           'pymongo',
           'urllib3',
           'raven',
-          'redis'
+          'redis',
+          'scrapy'
       ],
       packages=['utils4scrapy'],
       )

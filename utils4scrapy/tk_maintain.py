@@ -22,16 +22,16 @@ MONGOD_HOST = 'localhost'
 MONGOD_PORT = 27017
 
 # prod
+"""
 PER_TOKEN_HOURS_LIMIT = 1000
 AT_LEAST_TOKEN_COUNT = 6
 API_KEY = '4131380600'
+"""
 
 # dev
-"""
 PER_TOKEN_HOURS_LIMIT = 150
 AT_LEAST_TOKEN_COUNT = 1
 API_KEY = '1966311272'
-"""
 
 
 def _default_mongo(host=MONGOD_HOST, port=MONGOD_PORT, usedb='simple'):
