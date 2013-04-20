@@ -48,7 +48,7 @@ class MongodbPipeline(object):
     { "_id" : ObjectId("50af9034d086dd9cd0ba3275"), "a" : 1, "b" : [ 2, 3, 5, 6, [ 2, 7 ] ], "c" : [ 3, 5, 6 ] }
     """
 
-    def __init__(self, host=MONGOD_PORT, port=MONGOD_PORT):
+    def __init__(self, host=MONGOD_HOST, port=MONGOD_PORT):
         self.db = _default_mongo(host, port, usedb='master_timeline')
         log.msg('Mongod connect to {host}:{port}'.format(host=host, port=port), level=log.INFO)
 
