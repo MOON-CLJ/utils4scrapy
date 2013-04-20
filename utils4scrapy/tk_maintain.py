@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 from scrapy.exceptions import CloseSpider
 from scrapy import log
 from tk_alive import TkAlive

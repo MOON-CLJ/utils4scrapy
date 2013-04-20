@@ -1,8 +1,10 @@
-import pymongo
+# -*- coding: utf-8 -*-
+
 import time
-from scrapy.conf import settings
+from twisted.internet.threads import deferToThread
 from scrapy import log
 from items import WeiboItem, UserItem
+from tk_maintain import _default_mongo
 
 
 MONGOD_HOST = 'localhost'
@@ -46,27 +48,27 @@ class MongodbPipeline(object):
     { "_id" : ObjectId("50af9034d086dd9cd0ba3275"), "a" : 1, "b" : [ 2, 3, 5, 6, [ 2, 7 ] ], "c" : [ 3, 5, 6 ] }
     """
 
-    def __init__(self):
-        host = settings.get('MONGOD_HOST', MONGOD_HOST)
-        port = settings.get('MONGOD_PORT', MONGOD_PORT)
-        # 强制写journal，并强制safe
-        connection = pymongo.MongoClient(host=host, port=port, j=True, w=1)
-        db = connection.admin
-        db.authenticate('root', 'root')
+    def __init__(self, host=MONGOD_PORT, port=MONGOD_PORT):
+        self.db = _default_mongo(host, port, usedb='master_timeline')
         log.msg('Mongod connect to {host}:{port}'.format(host=host, port=port), level=log.INFO)
 
-        db = connection.master_timeline
-        self.db = db
+    @classmethod
+    def from_settings(cls, settings):
+        host = settings.get('MONGOD_HOST', MONGOD_HOST)
+        port = settings.get('MONGOD_PORT', MONGOD_PORT)
+        return cls(host, port)
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls.from_settings(crawler.settings)
 
     def process_item(self, item, spider):
         if isinstance(item, WeiboItem):
-            self.process_weibo(item)
+            return deferToThread(self.process_weibo, item, spider)
         elif isinstance(item, UserItem):
-            self.process_user(item)
+            return deferToThread(self.process_user, item, spider)
 
-        return item
-
-    def process_weibo(self, item):
+    def process_weibo(self, item, spider):
         weibo = item.to_dict()
         weibo['_id'] = weibo['id']
 
@@ -86,7 +88,9 @@ class MongodbPipeline(object):
             weibo['last_modify'] = weibo['first_in']
             self.db.master_timeline_weibo.insert(weibo)
 
-    def process_user(self, item):
+        return item
+
+    def process_user(self, item, spider):
         user = item.to_dict()
         user['_id'] = user['id']
         if self.db.master_timeline_user.find({'_id': user['_id']}).count():
@@ -107,3 +111,5 @@ class MongodbPipeline(object):
             user['first_in'] = time.time()
             user['last_modify'] = user['first_in']
             self.db.master_timeline_user.insert(user)
+
+        return item
