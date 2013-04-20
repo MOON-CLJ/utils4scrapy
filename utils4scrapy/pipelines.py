@@ -68,6 +68,12 @@ class MongodbPipeline(object):
         elif isinstance(item, UserItem):
             return deferToThread(self.process_user, item, spider)
 
+    def process_item_sync(self, item, spider):
+        if isinstance(item, WeiboItem):
+            return self.process_weibo(item, spider)
+        elif isinstance(item, UserItem):
+            return self.process_user(item, spider)
+
     def process_weibo(self, item, spider):
         weibo = item.to_dict()
         weibo['_id'] = weibo['id']
