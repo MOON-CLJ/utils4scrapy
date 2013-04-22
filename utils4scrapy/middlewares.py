@@ -50,14 +50,38 @@ RetryErrorResponseMiddleware process_spider_exception
 
 class InvalidTokenError(Exception):
     """token过期或不合法"""
+    def __init__(self, value=None):
+        self.value = value
+
+    def __str__(self):
+        if self.value:
+            return repr(self.value)
+        else:
+            return 'InvalidTokenError'
 
 
 class UnknownResponseError(Exception):
     """未处理的错误"""
+    def __init__(self, value=None):
+        self.value = value
+
+    def __str__(self):
+        if self.value:
+            return repr(self.value)
+        else:
+            return 'UnknownResponseError'
 
 
 class ShouldNotEmptyError(Exception):
     """返回不应该为空，但是为空了，在spider里抛出"""
+    def __init__(self, value=None):
+        self.value = value
+
+    def __str__(self):
+        if self.value:
+            return repr(self.value)
+        else:
+            return 'ShouldNotEmptyError'
 
 
 class RequestTokenMiddleware(object):
