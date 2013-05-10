@@ -68,7 +68,7 @@ def token_status(token):
             time.sleep(1)
             log.msg("[Token Status] now check", level=log.INFO)
 
-            http = urllib3.PoolManager()
+            http = urllib3.PoolManager(timeout=10)
             resp = http.request('GET', LIMIT_URL.format(access_token=token))
             resp = json.loads(resp.data)
 
@@ -83,7 +83,7 @@ def token_status(token):
             reset_time_in = resp['reset_time_in_seconds']
             remaining = resp['remaining_user_hits']
             return reset_time_in, remaining
-        except socket.gaierror:
+        except (socket.gaierror, urllib3.exceptions.TimeoutError):
             pass
 
 
