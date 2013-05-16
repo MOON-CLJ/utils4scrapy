@@ -4,6 +4,7 @@
 # usage: py clear_spider.py public_timeline [st]
 
 import sys
+import redis
 from tk_maintain import _default_redis
 
 #dev
@@ -26,7 +27,11 @@ if len(sys.argv) > 2 and sys.argv[2] == 'st':
 
 r = _default_redis(REDIS_HOST, REDIS_PORT)
 
-print 'scheduled requests: %s' % r.zcard(QUEUE_KEY % {'spider': spider_name})
+try:
+    print 'scheduled requests: %s' % r.llen(QUEUE_KEY % {'spider': spider_name})
+except redis.exceptions.ResponseError:
+    print 'scheduled requests: %s' % r.zcard(QUEUE_KEY % {'spider': spider_name})
+
 print 'dupefiler requests: %s' % r.scard(DUPEFILTER_KEY % {'spider': spider_name})
 
 if not not_del:
